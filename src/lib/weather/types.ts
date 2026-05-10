@@ -12,7 +12,7 @@ export type BriefingRequest = {
 export type WeatherReport = {
   metar: string;
   taf: string;
-  source: 'mock';
+  source: 'mock' | 'aviationweather.gov';
 };
 
 export type BriefingWeather = {

@@ -58,7 +58,15 @@ export function BriefingForm() {
 function ResultSection({ result }: { result: BriefingResult }) {
   return (
     <section className="space-y-4 rounded-xl bg-white p-6 shadow-sm">
-      <p className="rounded border border-red-300 bg-red-50 p-3 font-semibold text-red-700">Données de démonstration. Ne pas utiliser pour une décision de vol réelle.</p>
+      {result.isDemoData ? (
+        <p className="rounded border border-amber-300 bg-amber-50 p-3 font-semibold text-amber-800">
+          Source officielle indisponible : affichage en mode démonstration (mock).
+        </p>
+      ) : (
+        <p className="rounded border border-emerald-300 bg-emerald-50 p-3 font-semibold text-emerald-800">
+          Données issues de la source officielle AviationWeather.gov (METAR/TAF bruts).
+        </p>
+      )}
       <div className="text-sm">
         <p><strong>Route:</strong> {result.request.departureIcao} → {result.request.arrivalIcao}</p>
         <p><strong>Date:</strong> {result.request.flightDate} à {result.request.departureLocalTime} (locale)</p>
@@ -75,7 +83,7 @@ function ResultSection({ result }: { result: BriefingResult }) {
       <div>
         <h3 className="mb-2 font-semibold">Points d’attention météo</h3>
         {result.attentionPoints.length === 0 ? (
-          <p className="text-sm">Aucun mot-clé surveillé détecté dans les messages mockés.</p>
+          <p className="text-sm">Aucun mot-clé surveillé détecté dans les messages météo.</p>
         ) : (
           <ul className="list-disc space-y-1 pl-5 text-sm">
             {result.attentionPoints.map((item) => (

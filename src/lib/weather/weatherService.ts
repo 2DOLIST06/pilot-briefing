@@ -1,12 +1,13 @@
 import { analyzeWeatherTexts } from './analyzeWeather';
+import { AviationWeatherGovProvider } from './aviationWeatherGovProvider';
 import { MockWeatherProvider } from './mockWeatherProvider';
 import { BriefingRequest, BriefingResult, WeatherProvider } from './types';
 
 export class WeatherService {
-  constructor(private readonly provider: WeatherProvider = new MockWeatherProvider()) {}
+  constructor(private readonly provider: WeatherProvider = new AviationWeatherGovProvider()) {}
 
   async buildBriefing(request: BriefingRequest): Promise<BriefingResult> {
-    const weather = await this.provider.getWeatherForRoute({
+    const weather = await this.getWeatherWithFallback({
       departureIcao: request.departureIcao,
       arrivalIcao: request.arrivalIcao
     });
@@ -22,7 +23,16 @@ export class WeatherService {
       request,
       weather,
       attentionPoints,
-      isDemoData: true
+      isDemoData: weather.departure.source === 'mock' || weather.arrival.source === 'mock'
     };
+  }
+
+  private async getWeatherWithFallback(input: Pick<BriefingRequest, 'departureIcao' | 'arrivalIcao'>) {
+    try {
+      return await this.provider.getWeatherForRoute(input);
+    } catch (error) {
+      console.error('Source officielle indisponible, bascule vers données mock.', error);
+      return new MockWeatherProvider().getWeatherForRoute(input);
+    }
   }
 }
