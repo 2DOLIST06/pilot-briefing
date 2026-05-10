@@ -1,13 +1,11 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { WeatherService } from '@/lib/weather/weatherService';
 import { BriefingResult, FlightType } from '@/lib/weather/types';
-
-const weatherService = new WeatherService();
 
 export function BriefingForm() {
   const [result, setResult] = useState<BriefingResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -20,15 +18,28 @@ export function BriefingForm() {
     const flightType = String(formData.get('flightType') ?? 'VFR') as FlightType;
     const plannedAltitudeFt = Number(formData.get('plannedAltitudeFt') ?? 0);
 
-    const briefing = await weatherService.buildBriefing({
-      departureIcao,
-      arrivalIcao,
-      flightDate,
-      departureLocalTime,
-      flightType,
-      plannedAltitudeFt
+    setError(null);
+
+    const response = await fetch('/api/briefing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        departureIcao,
+        arrivalIcao,
+        flightDate,
+        departureLocalTime,
+        flightType,
+        plannedAltitudeFt
+      })
     });
 
+    if (!response.ok) {
+      setResult(null);
+      setError('Impossible de récupérer le briefing météo pour le moment.');
+      return;
+    }
+
+    const briefing = (await response.json()) as BriefingResult;
     setResult(briefing);
   }
 
@@ -50,6 +61,7 @@ export function BriefingForm() {
         <button type="submit" className="rounded bg-slate-900 px-4 py-2 text-white">Générer le dossier météo</button>
       </form>
 
+      {error ? <p className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
       {result ? <ResultSection result={result} /> : null}
     </div>
   );
