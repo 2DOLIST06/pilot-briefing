@@ -6,7 +6,7 @@ Pilot Weather Briefing est une application web responsive destinée aux pilotes 
 - d’un aérodrome d’arrivée (OACI),
 - d’une date et heure locale prévues de départ.
 
-⚠️ La version MVP utilise uniquement des données météo mockées (démonstration).
+Les METAR/TAF sont récupérés en direct depuis la source officielle **AviationWeather.gov** (NOAA). En cas d’indisponibilité de la source, l’application bascule automatiquement sur des données mockées.
 
 ## Stack
 - Next.js (App Router)
@@ -28,12 +28,13 @@ Puis ouvrir [http://localhost:3000](http://localhost:3000).
 - Page d’accueil simple avec explication.
 - Formulaire de briefing (départ, arrivée, date, heure locale, type de vol, altitude).
 - Résultats affichés après soumission : résumé, METAR/TAF départ et arrivée.
-- Avertissement visuel explicite sur le caractère démonstratif des données.
+- Récupération METAR/TAF en direct via AviationWeather.gov (source officielle).
+- Bascule automatique en mode démonstration (mock) si la source officielle est indisponible.
 - Analyse simple de mots-clés météo (CB, TS, FG, BR, BKN, OVC) avec points d’attention.
 - Aucun avis automatique « vol possible/impossible ».
 
 ## Limites de cette version MVP
-- Aucune connexion à une source météo aviation réelle.
+- Dépendance réseau à AviationWeather.gov pour les données live.
 - Pas de backend séparé.
 - Pas de base de données.
 - Pas d’authentification.
