@@ -150,6 +150,14 @@ function ChartBlock({ chart }: { chart: BriefingChart }) {
     <article className="rounded border bg-slate-50 p-3 text-sm">
       <h4 className="font-semibold">{chart.title}</h4>
       <p className="mt-1 text-xs text-slate-700">{chart.description}</p>
+      {chart.embedUrl ? (
+        <iframe
+          src={chart.embedUrl}
+          title={chart.title}
+          loading="lazy"
+          className="mt-2 h-72 w-full rounded border bg-white"
+        />
+      ) : null}
       <a href={chart.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-medium text-blue-700 underline">
         Ouvrir ({chart.sourceLabel})
       </a>
@@ -187,21 +195,45 @@ function extractMetarTaf(result: BriefingResult): string {
 }
 
 function decodeWeather(report: string): string {
-  const replacements: Array<[RegExp, string]> = [
-    [/\bCAVOK\b/g, 'CAVOK (visibilité >= 10 km, pas de nuages significatifs sous 5000 ft)'],
-    [/\bBKN(\d{3})\b/g, 'Nuages fragmentés à $100 ft'],
-    [/\bOVC(\d{3})\b/g, 'Couvert à $100 ft'],
-    [/\bSCT(\d{3})\b/g, 'Nuages épars à $100 ft'],
-    [/\bFEW(\d{3})\b/g, 'Peu de nuages à $100 ft'],
-    [/\bTS\b/g, 'orage'],
-    [/\bRA\b/g, 'pluie'],
-    [/\bSN\b/g, 'neige'],
-    [/\bFG\b/g, 'brouillard'],
-    [/\bKT\b/g, 'kt (nœuds)'],
-    [/\bTEMPO\b/g, 'temporairement'],
-    [/\bPROB(\d{2})\b/g, 'probabilité $1%'],
-    [/\bNOSIG\b/g, 'pas de changement significatif']
+  const tokenMap: Array<[RegExp, string]> = [
+    [/\bCAVOK\b/g, 'CAVOK (visibilité ≥ 10 km, pas de météo significative, pas de nuages significatifs < 5000 ft)'],
+    [/\bNOSIG\b/g, 'NOSIG (pas de changement significatif prévu)'],
+    [/\bTEMPO\b/g, 'TEMPO (fluctuations temporaires)'],
+    [/\bBECMG\b/g, 'BECMG (évolution progressive attendue)'],
+    [/\bPROB(\d{2})\b/g, 'PROB$1 (probabilité de $1%)'],
+    [/\bTSRA\b/g, 'TSRA (orage avec pluie)'],
+    [/\bSHRA\b/g, 'SHRA (averses de pluie)'],
+    [/\bTS\b/g, 'TS (orage)'],
+    [/\bRA\b/g, 'RA (pluie)'],
+    [/\bDZ\b/g, 'DZ (bruine)'],
+    [/\bSN\b/g, 'SN (neige)'],
+    [/\bFG\b/g, 'FG (brouillard)'],
+    [/\bBR\b/g, 'BR (brume)']
   ];
 
-  return replacements.reduce((text, [pattern, replacement]) => text.replace(pattern, replacement), report);
+  const decodedCore = tokenMap.reduce((text, [pattern, replacement]) => text.replace(pattern, replacement), report);
+
+  return decodedCore
+    .replace(/\b(\d{3}|VRB)(\d{2})(G\d{2})?KT\b/g, (_, dir, speed, gust) => {
+      const dirText = dir === 'VRB' ? 'direction variable' : `vent du ${dir}°`;
+      const gustText = gust ? ` rafales ${gust.slice(1)} kt` : '';
+      return `${dirText} ${speed} kt${gustText}`;
+    })
+    .replace(/\b(\d{4})\b/g, (match) => {
+      if (match === '9999') return 'visibilité ≥ 10 km';
+      const meters = Number(match);
+      if (meters >= 1000 && meters <= 9000) return `visibilité ${meters} m`;
+      return match;
+    })
+    .replace(/\b(FEW|SCT|BKN|OVC)(\d{3})(CB|TCU)?\b/g, (_, cover, h, convective) => {
+      const coverMap: Record<string, string> = {
+        FEW: 'peu nuageux',
+        SCT: 'nuages épars',
+        BKN: 'nuages fragmentés',
+        OVC: 'couvert'
+      };
+      const convectiveText = convective ? ` (${convective})` : '';
+      return `${coverMap[cover]} à ${Number(h) * 100} ft${convectiveText}`;
+    })
+    .replace(/\bQ(\d{4})\b/g, 'QNH $1 hPa');
 }
