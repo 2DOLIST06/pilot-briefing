@@ -6,17 +6,26 @@ import { BriefingResult, FlightType } from '@/lib/weather/types';
 export function BriefingForm() {
   const [result, setResult] = useState<BriefingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [decodedView, setDecodedView] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
 
-    const departureIcao = String(formData.get('departureIcao') ?? '').toUpperCase();
-    const arrivalIcao = String(formData.get('arrivalIcao') ?? '').toUpperCase();
-    const flightDate = String(formData.get('flightDate') ?? '');
-    const departureLocalTime = String(formData.get('departureLocalTime') ?? '');
+    const departureIcaoInput = String(formData.get('departureIcao') ?? '').toUpperCase().trim();
+    const arrivalIcaoInput = String(formData.get('arrivalIcao') ?? '').toUpperCase().trim();
+    const departureIcao = departureIcaoInput || arrivalIcaoInput;
+    const arrivalIcao = arrivalIcaoInput || departureIcaoInput;
+    const flightDate = String(formData.get('flightDate') ?? '') || new Date().toISOString().slice(0, 10);
+    const departureLocalTime = String(formData.get('departureLocalTime') ?? '') || '12:00';
     const flightType = String(formData.get('flightType') ?? 'VFR') as FlightType;
-    const plannedAltitudeFt = Number(formData.get('plannedAltitudeFt') ?? 0);
+    const plannedAltitudeFt = Number(formData.get('plannedAltitudeFt') ?? 3000);
+
+    if (!departureIcao && !arrivalIcao) {
+      setError('Veuillez renseigner au moins un aérodrome (départ ou arrivée).');
+      setResult(null);
+      return;
+    }
 
     setError(null);
 
@@ -47,27 +56,33 @@ export function BriefingForm() {
     <div className="space-y-6">
       <form className="grid gap-4 rounded-xl bg-white p-6 shadow-sm" onSubmit={handleSubmit}>
         <div className="grid gap-4 md:grid-cols-2">
-          <label className="space-y-1"><span>Départ (OACI)</span><input name="departureIcao" required placeholder="LFMD" className="w-full rounded border p-2"/></label>
-          <label className="space-y-1"><span>Arrivée (OACI)</span><input name="arrivalIcao" required placeholder="LFMT" className="w-full rounded border p-2"/></label>
+          <label className="space-y-1"><span>Départ (OACI)</span><input name="departureIcao" placeholder="LFMD" className="w-full rounded border p-2"/></label>
+          <label className="space-y-1"><span>Arrivée (OACI)</span><input name="arrivalIcao" placeholder="LFMT" className="w-full rounded border p-2"/></label>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
-          <label className="space-y-1"><span>Date du vol</span><input type="date" name="flightDate" required className="w-full rounded border p-2"/></label>
-          <label className="space-y-1"><span>Heure locale départ</span><input type="time" name="departureLocalTime" required className="w-full rounded border p-2"/></label>
+          <label className="space-y-1"><span>Date du vol (optionnel)</span><input type="date" name="flightDate" className="w-full rounded border p-2"/></label>
+          <label className="space-y-1"><span>Heure locale départ (optionnel)</span><input type="time" name="departureLocalTime" className="w-full rounded border p-2"/></label>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-1"><span>Type de vol</span><select name="flightType" defaultValue="VFR" className="w-full rounded border p-2"><option value="VFR">VFR</option><option value="IFR">IFR</option></select></label>
-          <label className="space-y-1"><span>Altitude prévue (ft)</span><input type="number" name="plannedAltitudeFt" min={500} step={100} required className="w-full rounded border p-2"/></label>
+          <label className="space-y-1"><span>Altitude prévue (ft, optionnel)</span><input type="number" name="plannedAltitudeFt" min={500} step={100} className="w-full rounded border p-2"/></label>
         </div>
+        <label className="inline-flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={decodedView} onChange={(event) => setDecodedView(event.target.checked)} />
+          Afficher METAR/TAF décodés
+        </label>
         <button type="submit" className="rounded bg-slate-900 px-4 py-2 text-white">Générer le dossier météo</button>
       </form>
 
       {error ? <p className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-      {result ? <ResultSection result={result} /> : null}
+      {result ? <ResultSection result={result} decodedView={decodedView} /> : null}
     </div>
   );
 }
 
-function ResultSection({ result }: { result: BriefingResult }) {
+function ResultSection({ result, decodedView }: { result: BriefingResult; decodedView: boolean }) {
+  const sameAerodrome = result.request.departureIcao === result.request.arrivalIcao;
+
   return (
     <section className="space-y-4 rounded-xl bg-white p-6 shadow-sm">
       {result.isDemoData ? (
@@ -80,16 +95,16 @@ function ResultSection({ result }: { result: BriefingResult }) {
         </p>
       )}
       <div className="text-sm">
-        <p><strong>Route:</strong> {result.request.departureIcao} → {result.request.arrivalIcao}</p>
+        <p><strong>Route:</strong> {sameAerodrome ? `Aérodrome départ/arrivée: ${result.request.departureIcao}` : `${result.request.departureIcao} → ${result.request.arrivalIcao}`}</p>
         <p><strong>Date:</strong> {result.request.flightDate} à {result.request.departureLocalTime} (locale)</p>
         <p><strong>Type:</strong> {result.request.flightType} | <strong>Altitude:</strong> {result.request.plannedAltitudeFt} ft</p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <WeatherBlock title="METAR départ" value={result.weather.departure.metar} />
-        <WeatherBlock title="TAF départ" value={result.weather.departure.taf} />
-        <WeatherBlock title="METAR arrivée" value={result.weather.arrival.metar} />
-        <WeatherBlock title="TAF arrivée" value={result.weather.arrival.taf} />
+        <WeatherBlock title="METAR départ" value={result.weather.departure.metar} decodedView={decodedView} />
+        <WeatherBlock title="TAF départ" value={result.weather.departure.taf} decodedView={decodedView} />
+        {!sameAerodrome ? <WeatherBlock title="METAR arrivée" value={result.weather.arrival.metar} decodedView={decodedView} /> : null}
+        {!sameAerodrome ? <WeatherBlock title="TAF arrivée" value={result.weather.arrival.taf} decodedView={decodedView} /> : null}
       </div>
 
       <div>
@@ -108,11 +123,33 @@ function ResultSection({ result }: { result: BriefingResult }) {
   );
 }
 
-function WeatherBlock({ title, value }: { title: string; value: string }) {
+function WeatherBlock({ title, value, decodedView }: { title: string; value: string; decodedView: boolean }) {
+  const displayedValue = decodedView ? decodeWeather(value) : value;
+
   return (
     <article className="rounded border bg-slate-50 p-3">
       <h4 className="mb-1 text-sm font-semibold">{title}</h4>
-      <p className="font-mono text-xs text-slate-800">{value}</p>
+      <p className="text-xs text-slate-800">{displayedValue}</p>
     </article>
   );
+}
+
+function decodeWeather(report: string): string {
+  const replacements: Array<[RegExp, string]> = [
+    [/\bCAVOK\b/g, 'CAVOK (visibilité >= 10 km, pas de nuages significatifs sous 5000 ft)'],
+    [/\bBKN(\d{3})\b/g, 'Nuages fragmentés à $100 ft'],
+    [/\bOVC(\d{3})\b/g, 'Couvert à $100 ft'],
+    [/\bSCT(\d{3})\b/g, 'Nuages épars à $100 ft'],
+    [/\bFEW(\d{3})\b/g, 'Peu de nuages à $100 ft'],
+    [/\bTS\b/g, 'orage'],
+    [/\bRA\b/g, 'pluie'],
+    [/\bSN\b/g, 'neige'],
+    [/\bFG\b/g, 'brouillard'],
+    [/\bKT\b/g, 'kt (nœuds)'],
+    [/\bTEMPO\b/g, 'temporairement'],
+    [/\bPROB(\d{2})\b/g, 'probabilité $1%'],
+    [/\bNOSIG\b/g, 'pas de changement significatif']
+  ];
+
+  return replacements.reduce((text, [pattern, replacement]) => text.replace(pattern, replacement), report);
 }

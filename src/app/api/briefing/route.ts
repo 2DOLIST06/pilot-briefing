@@ -8,17 +8,23 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as Partial<BriefingRequest>;
 
-    if (!body.departureIcao || !body.arrivalIcao || !body.flightDate || !body.departureLocalTime || !body.flightType || !body.plannedAltitudeFt) {
+    const departureIcao = body.departureIcao?.trim().toUpperCase() ?? '';
+    const arrivalIcao = body.arrivalIcao?.trim().toUpperCase() ?? '';
+
+    if (!departureIcao && !arrivalIcao) {
       return NextResponse.json({ error: 'Paramètres invalides.' }, { status: 400 });
     }
 
+    const normalizedDepartureIcao = departureIcao || arrivalIcao;
+    const normalizedArrivalIcao = arrivalIcao || departureIcao;
+
     const briefing = await weatherService.buildBriefing({
-      departureIcao: body.departureIcao,
-      arrivalIcao: body.arrivalIcao,
-      flightDate: body.flightDate,
-      departureLocalTime: body.departureLocalTime,
-      flightType: body.flightType,
-      plannedAltitudeFt: Number(body.plannedAltitudeFt)
+      departureIcao: normalizedDepartureIcao,
+      arrivalIcao: normalizedArrivalIcao,
+      flightDate: body.flightDate || new Date().toISOString().slice(0, 10),
+      departureLocalTime: body.departureLocalTime || '12:00',
+      flightType: body.flightType || 'VFR',
+      plannedAltitudeFt: Number(body.plannedAltitudeFt || 3000)
     });
 
     return NextResponse.json(briefing);
