@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { BriefingResult, FlightType } from '@/lib/weather/types';
+import { BriefingChart, BriefingResult, FlightType } from '@/lib/weather/types';
 
 export function BriefingForm() {
   const [result, setResult] = useState<BriefingResult | null>(null);
@@ -94,6 +94,12 @@ function ResultSection({ result, decodedView }: { result: BriefingResult; decode
           Données issues de la source officielle AviationWeather.gov (METAR/TAF bruts).
         </p>
       )}
+
+      <div className="flex flex-wrap gap-2">
+        <DownloadButton filename="dossier-meteo-complet.txt" content={result.dossierText} label="Télécharger le dossier complet" />
+        <DownloadButton filename="metar-taf.txt" content={extractMetarTaf(result)} label="Télécharger METAR/TAF" />
+      </div>
+
       <div className="text-sm">
         <p><strong>Route:</strong> {sameAerodrome ? `Aérodrome départ/arrivée: ${result.request.departureIcao}` : `${result.request.departureIcao} → ${result.request.arrivalIcao}`}</p>
         <p><strong>Date:</strong> {result.request.flightDate} à {result.request.departureLocalTime} (locale)</p>
@@ -105,6 +111,11 @@ function ResultSection({ result, decodedView }: { result: BriefingResult; decode
         <WeatherBlock title="TAF départ" value={result.weather.departure.taf} decodedView={decodedView} />
         {!sameAerodrome ? <WeatherBlock title="METAR arrivée" value={result.weather.arrival.metar} decodedView={decodedView} /> : null}
         {!sameAerodrome ? <WeatherBlock title="TAF arrivée" value={result.weather.arrival.taf} decodedView={decodedView} /> : null}
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <ChartBlock chart={result.attachments.temsi} />
+        <ChartBlock chart={result.attachments.wintem} />
       </div>
 
       <div>
@@ -132,6 +143,47 @@ function WeatherBlock({ title, value, decodedView }: { title: string; value: str
       <p className="text-xs text-slate-800">{displayedValue}</p>
     </article>
   );
+}
+
+function ChartBlock({ chart }: { chart: BriefingChart }) {
+  return (
+    <article className="rounded border bg-slate-50 p-3 text-sm">
+      <h4 className="font-semibold">{chart.title}</h4>
+      <p className="mt-1 text-xs text-slate-700">{chart.description}</p>
+      <a href={chart.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-medium text-blue-700 underline">
+        Ouvrir ({chart.sourceLabel})
+      </a>
+    </article>
+  );
+}
+
+function DownloadButton({ filename, content, label }: { filename: string; content: string; label: string }) {
+  function handleDownload() {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <button type="button" onClick={handleDownload} className="rounded border border-slate-300 px-3 py-1 text-xs font-medium text-slate-800 hover:bg-slate-100">
+      {label}
+    </button>
+  );
+}
+
+function extractMetarTaf(result: BriefingResult): string {
+  return [
+    `[METAR DEPART] ${result.weather.departure.metar}`,
+    `[TAF DEPART] ${result.weather.departure.taf}`,
+    `[METAR ARRIVEE] ${result.weather.arrival.metar}`,
+    `[TAF ARRIVEE] ${result.weather.arrival.taf}`
+  ].join('\n');
 }
 
 function decodeWeather(report: string): string {
