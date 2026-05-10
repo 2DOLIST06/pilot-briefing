@@ -1,13 +1,11 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { WeatherService } from '@/lib/weather/weatherService';
 import { BriefingResult, FlightType } from '@/lib/weather/types';
-
-const weatherService = new WeatherService();
 
 export function BriefingForm() {
   const [result, setResult] = useState<BriefingResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -20,15 +18,28 @@ export function BriefingForm() {
     const flightType = String(formData.get('flightType') ?? 'VFR') as FlightType;
     const plannedAltitudeFt = Number(formData.get('plannedAltitudeFt') ?? 0);
 
-    const briefing = await weatherService.buildBriefing({
-      departureIcao,
-      arrivalIcao,
-      flightDate,
-      departureLocalTime,
-      flightType,
-      plannedAltitudeFt
+    setError(null);
+
+    const response = await fetch('/api/briefing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        departureIcao,
+        arrivalIcao,
+        flightDate,
+        departureLocalTime,
+        flightType,
+        plannedAltitudeFt
+      })
     });
 
+    if (!response.ok) {
+      setResult(null);
+      setError('Impossible de récupérer le briefing météo pour le moment.');
+      return;
+    }
+
+    const briefing = (await response.json()) as BriefingResult;
     setResult(briefing);
   }
 
@@ -50,6 +61,7 @@ export function BriefingForm() {
         <button type="submit" className="rounded bg-slate-900 px-4 py-2 text-white">Générer le dossier météo</button>
       </form>
 
+      {error ? <p className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
       {result ? <ResultSection result={result} /> : null}
     </div>
   );
@@ -58,7 +70,15 @@ export function BriefingForm() {
 function ResultSection({ result }: { result: BriefingResult }) {
   return (
     <section className="space-y-4 rounded-xl bg-white p-6 shadow-sm">
-      <p className="rounded border border-red-300 bg-red-50 p-3 font-semibold text-red-700">Données de démonstration. Ne pas utiliser pour une décision de vol réelle.</p>
+      {result.isDemoData ? (
+        <p className="rounded border border-amber-300 bg-amber-50 p-3 font-semibold text-amber-800">
+          Source officielle indisponible : affichage en mode démonstration (mock).
+        </p>
+      ) : (
+        <p className="rounded border border-emerald-300 bg-emerald-50 p-3 font-semibold text-emerald-800">
+          Données issues de la source officielle AviationWeather.gov (METAR/TAF bruts).
+        </p>
+      )}
       <div className="text-sm">
         <p><strong>Route:</strong> {result.request.departureIcao} → {result.request.arrivalIcao}</p>
         <p><strong>Date:</strong> {result.request.flightDate} à {result.request.departureLocalTime} (locale)</p>
@@ -75,7 +95,7 @@ function ResultSection({ result }: { result: BriefingResult }) {
       <div>
         <h3 className="mb-2 font-semibold">Points d’attention météo</h3>
         {result.attentionPoints.length === 0 ? (
-          <p className="text-sm">Aucun mot-clé surveillé détecté dans les messages mockés.</p>
+          <p className="text-sm">Aucun mot-clé surveillé détecté dans les messages météo.</p>
         ) : (
           <ul className="list-disc space-y-1 pl-5 text-sm">
             {result.attentionPoints.map((item) => (
