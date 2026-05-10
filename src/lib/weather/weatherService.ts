@@ -12,7 +12,7 @@ export class WeatherService {
       arrivalIcao: request.arrivalIcao
     });
 
-    const attachments = this.buildAttachments(request);
+    const attachments = this.buildAttachments();
 
     const attentionPoints = analyzeWeatherTexts([
       weather.departure.metar,
@@ -46,21 +46,21 @@ export class WeatherService {
     };
   }
 
-  private buildAttachments(request: BriefingRequest): BriefingAttachments {
-    const dateTag = request.flightDate;
-
+  private buildAttachments(): BriefingAttachments {
     return {
       temsi: {
         title: 'Carte TEMSI',
-        description: 'Consultez la carte TEMSI (temps significatif) pour compléter l’analyse route.',
-        sourceLabel: 'Météo-France Aéro',
-        sourceUrl: `https://meteofrance.com/previsions-meteo-aeronautique?date=${dateTag}`
+        description: 'Visualisation intégrée de la carte des phénomènes significatifs (source officielle AWC/NOAA).',
+        sourceLabel: 'AviationWeather (NOAA)',
+        sourceUrl: `https://aviationweather.gov/gfa/`,
+        embedUrl: `https://aviationweather.gov/gfa/#sigwx`
       },
       wintem: {
         title: 'Carte WINTEM',
-        description: 'Consultez la carte WINTEM (vent/température en altitude) pour la préparation en croisière.',
-        sourceLabel: 'Météo-France Aéro',
-        sourceUrl: `https://meteofrance.com/previsions-meteo-aeronautique?date=${dateTag}`
+        description: 'Visualisation intégrée des vents et températures d’altitude (source officielle AWC/NOAA).',
+        sourceLabel: 'AviationWeather (NOAA)',
+        sourceUrl: `https://aviationweather.gov/windtemp/`,
+        embedUrl: `https://aviationweather.gov/windtemp/`
       }
     };
   }

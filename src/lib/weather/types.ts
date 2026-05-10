@@ -25,6 +25,7 @@ export type BriefingChart = {
   description: string;
   sourceLabel: string;
   sourceUrl: string;
+  embedUrl?: string;
 };
 
 export type BriefingAttachments = {
