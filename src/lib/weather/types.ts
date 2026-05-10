@@ -20,6 +20,18 @@ export type BriefingWeather = {
   arrival: WeatherReport;
 };
 
+export type BriefingChart = {
+  title: string;
+  description: string;
+  sourceLabel: string;
+  sourceUrl: string;
+};
+
+export type BriefingAttachments = {
+  temsi: BriefingChart;
+  wintem: BriefingChart;
+};
+
 export type AttentionLevel = 'info' | 'caution';
 
 export type WeatherAttentionPoint = {
@@ -31,6 +43,8 @@ export type WeatherAttentionPoint = {
 export type BriefingResult = {
   request: BriefingRequest;
   weather: BriefingWeather;
+  attachments: BriefingAttachments;
+  dossierText: string;
   attentionPoints: WeatherAttentionPoint[];
   isDemoData: boolean;
 };
