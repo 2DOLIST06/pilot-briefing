@@ -15,11 +15,6 @@ type AircraftModel = {
   fuelDensityKgPerL: number;
 };
 
-type Account = {
-  fullName: string;
-  email: string;
-  password: string;
-};
 
 const STORAGE_KEY = 'pilot-briefing-aircraft-models';
 
@@ -39,7 +34,6 @@ const defaultModel: AircraftModel = {
 export function MassBalanceTool() {
   const [models, setModels] = useState<AircraftModel[]>([defaultModel]);
   const [activeModelId, setActiveModelId] = useState(defaultModel.id);
-  const [account, setAccount] = useState<Account | null>(null);
 
   const [frontOccupantsKg, setFrontOccupantsKg] = useState(160);
   const [rearOccupantsKg, setRearOccupantsKg] = useState(0);
@@ -113,17 +107,6 @@ export function MassBalanceTool() {
     event.currentTarget.reset();
   }
 
-  function createAccount(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const created: Account = {
-      fullName: String(formData.get('fullName') ?? ''),
-      email: String(formData.get('email') ?? ''),
-      password: String(formData.get('password') ?? '')
-    };
-    setAccount(created);
-    event.currentTarget.reset();
-  }
 
   return (
     <section className="space-y-6">
@@ -175,16 +158,6 @@ export function MassBalanceTool() {
         <button type="submit" className="rounded bg-slate-900 px-4 py-2 text-white">Enregistrer le modèle</button>
       </form>
 
-      <form className="grid gap-4 rounded-xl bg-white p-6 shadow-sm" onSubmit={createAccount}>
-        <h3 className="text-lg font-semibold">Créer un compte</h3>
-        <div className="grid gap-3 md:grid-cols-2">
-          <input required name="fullName" placeholder="Nom complet" className="rounded border p-2" />
-          <input required type="email" name="email" placeholder="Email" className="rounded border p-2" />
-          <input required type="password" minLength={8} name="password" placeholder="Mot de passe (8 caractères min.)" className="rounded border p-2" />
-        </div>
-        <button type="submit" className="rounded bg-blue-700 px-4 py-2 text-white">Créer mon compte</button>
-        {account ? <p className="text-sm text-emerald-700">Compte créé pour {account.fullName} ({account.email}).</p> : null}
-      </form>
     </section>
   );
 }
