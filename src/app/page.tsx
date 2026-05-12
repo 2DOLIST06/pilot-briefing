@@ -1,5 +1,6 @@
 import { BriefingForm } from '@/components/BriefingForm';
 import { Disclaimer } from '@/components/Disclaimer';
+import { MassBalanceTool } from '@/components/MassBalanceTool';
 
 export default function HomePage() {
   return (
@@ -11,7 +12,14 @@ export default function HomePage() {
         </p>
       </header>
       <Disclaimer />
-      <BriefingForm />
+      <section className='rounded-xl bg-white p-2 shadow-sm'>
+        <div className='flex flex-wrap gap-2'>
+          <a href='#meteo' className='rounded bg-slate-900 px-3 py-2 text-sm text-white'>Briefing météo</a>
+          <a href='#masse' className='rounded border border-slate-300 px-3 py-2 text-sm'>Masse & centrage</a>
+        </div>
+      </section>
+      <section id='meteo'><BriefingForm /></section>
+      <section id='masse'><MassBalanceTool /></section>
     </main>
   );
 }
